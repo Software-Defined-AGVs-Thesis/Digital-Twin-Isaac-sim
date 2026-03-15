@@ -1,0 +1,30 @@
+[project]
+name = "OmniLRS"
+version = "1.0.0"
+description = "A IsaacSim based lunar simulator for rover locomotion."
+requires-python = ">=3.10"
+keywords = ["lunar", "simulator", "rover", "locomotion", "IsaacSim"]
+authors = [
+    { name = "Antoine Richard", email = "antoine.richard@uni.lu" },
+    { name = "Junnosuke Kamohara", email = "jkamohara3@gatech.edu" },
+]
+
+dependencies = [
+    "black>=22.0.0",
+    "skyfield",
+    "zfpy",
+    "warp-lang",
+    "numba",
+    "gdown",
+    "gdal",
+    "omegaconf",
+    "hydra-core",
+    "opencv-python",
+]
+
+[tool.black]
+line-length = 120
+
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"

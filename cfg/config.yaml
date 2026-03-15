@@ -1,0 +1,10 @@
+defaults:
+  - environment: lunalab
+  - rendering: ray_tracing
+  - mode: ROS2
+  - physics: default_physics
+
+hydra:
+  output_subdir: null
+  run:
+    dir: .

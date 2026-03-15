@@ -1,0 +1,22 @@
+robots_settings:
+  uses_nucleus: false
+  is_ROS2: true
+  max_robots: 1
+  robots_root: /Robots
+  parameters:
+  - robot_name: turtlebot3_burger
+    usd_path: assets/USD_Assets/robots/turtlebot3_burger.usd
+    pose:
+      position:
+      - 0.0
+      - 0.0
+      - 0.1
+      orientation:
+      - 1.0
+      - 0.0
+      - 0.0
+      - 0.0
+    domain_id: 0
+    target_links:
+    - wheel_left_link
+    - wheel_right_link

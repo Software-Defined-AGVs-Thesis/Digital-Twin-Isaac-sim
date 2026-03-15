@@ -1,0 +1,17 @@
+**__pycache__
+**build
+**install
+**log
+**logs
+**devel
+**.swp
+**data
+.thumbs
+.zip
+
+# Ignore large temporary files from the largescale environment
+mesh_backbone_coarse.npz
+mesh_backbone_fine.npz
+
+# Assets downloaded from S3 shall not be version controlled
+assets/Terrains/SouthPole/

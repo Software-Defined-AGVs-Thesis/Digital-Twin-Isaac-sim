@@ -1,0 +1,29 @@
+renderer:
+  renderer: "RayTracedLighting"
+  headless: False
+  samples_per_pixel_per_frame: 32
+  max_bounces: 6
+  max_specular_transmission_bounces: 6
+  max_volume_bounces: 4
+  subdiv_refinement_level: 0
+
+lens_flares:
+  enable: False
+  scale: 0.5
+  blades: 9
+  aperture_rotation: 0.0
+  sensor_diagonal: 28.0
+  sensor_aspect_ratio: 1.5
+  fstop: 2.8
+  focal_length: 12.0
+
+motion_blur:
+  enable: False
+  max_blur_diameter_fraction: 0.02
+  exposure_fraction: 1.0
+  num_samples: 8
+
+chromatic_aberration:
+  enable: False
+  strength: [-0.055, -0.075, 0.015]
+  model: ["Radial", "Radial", "Radial"]
