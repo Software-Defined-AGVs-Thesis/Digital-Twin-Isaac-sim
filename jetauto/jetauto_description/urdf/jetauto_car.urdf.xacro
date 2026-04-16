@@ -114,7 +114,7 @@
   </link>
   <joint
     name="wheel_right_front_joint"
-    type="fixed">
+    type="continuous">
     <origin
       xyz="0.097397 -0.086125 0.04508"
       rpy="1.5708 1.5708 0" />
@@ -122,6 +122,7 @@
       link="base_link" />
     <child
       link="wheel_right_front_link" />
+    <axis xyz="0 0 1" />
   </joint>
   <link
     name="wheel_left_front_link">
@@ -147,7 +148,7 @@
   </link>
   <joint
     name="wheel_left_front_joint"
-    type="fixed">
+    type="continuous">
     <origin
       xyz="0.097397 0.086125 0.04508"
       rpy="1.5708 1.5708 0" />
@@ -155,6 +156,7 @@
       link="base_link" />
     <child
       link="wheel_left_front_link" />
+    <axis xyz="0 0 1" />
   </joint>
   <link
     name="wheel_right_back_link">
@@ -180,7 +182,7 @@
   </link>
   <joint
     name="wheel_right_back_joint"
-    type="fixed">
+    type="continuous">
     <origin
       xyz="-0.097397 -0.086125 0.04508"
       rpy="1.5708 1.5708 0" />
@@ -188,6 +190,7 @@
       link="base_link" />
     <child
       link="wheel_right_back_link" />
+    <axis xyz="0 0 1" />
   </joint>
   <link
     name="wheel_left_back_link">
@@ -213,7 +216,7 @@
   </link>
   <joint
     name="wheel_left_back_joint"
-    type="fixed">
+    type="continuous">
     <origin
       xyz="-0.097397 0.086125 0.04508"
       rpy="1.5708 1.5708 0" />
@@ -221,6 +224,7 @@
       link="base_link" />
     <child
       link="wheel_left_back_link" />
+    <axis xyz="0 0 1" />
   </joint>
   <link
     name="mic_link">

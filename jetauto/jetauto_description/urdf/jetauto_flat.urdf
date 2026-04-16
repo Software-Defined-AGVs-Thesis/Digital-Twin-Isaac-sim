@@ -109,6 +109,7 @@
   </joint>
   <link name="base_link">
     <inertial>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.08"/>
       <mass value="1.6"/>
       <inertia ixx="0.004492333666666667" ixy="0" ixz="0" iyy="0.013450200333333334" iyz="0" izz="0.014564533333333332"/>
     </inertial>
@@ -175,10 +176,11 @@
       </geometry>
     </collision>
   </link>
-  <joint name="wheel_right_front_joint" type="fixed">
+  <joint name="wheel_right_front_joint" type="continuous">
     <origin rpy="1.5708 1.5708 0" xyz="0.097397 -0.086125 0.04508"/>
     <parent link="base_link"/>
     <child link="wheel_right_front_link"/>
+    <axis xyz="0 0 1"/>
   </joint>
   <link name="wheel_left_front_link">
     <inertial>
@@ -199,10 +201,11 @@
       </geometry>
     </collision>
   </link>
-  <joint name="wheel_left_front_joint" type="fixed">
+  <joint name="wheel_left_front_joint" type="continuous">
     <origin rpy="1.5708 1.5708 0" xyz="0.097397 0.086125 0.04508"/>
     <parent link="base_link"/>
     <child link="wheel_left_front_link"/>
+    <axis xyz="0 0 1"/>
   </joint>
   <link name="wheel_right_back_link">
     <inertial>
@@ -223,10 +226,11 @@
       </geometry>
     </collision>
   </link>
-  <joint name="wheel_right_back_joint" type="fixed">
+  <joint name="wheel_right_back_joint" type="continuous">
     <origin rpy="1.5708 1.5708 0" xyz="-0.097397 -0.086125 0.04508"/>
     <parent link="base_link"/>
     <child link="wheel_right_back_link"/>
+    <axis xyz="0 0 1"/>
   </joint>
   <link name="wheel_left_back_link">
     <inertial>
@@ -247,10 +251,11 @@
       </geometry>
     </collision>
   </link>
-  <joint name="wheel_left_back_joint" type="fixed">
+  <joint name="wheel_left_back_joint" type="continuous">
     <origin rpy="1.5708 1.5708 0" xyz="-0.097397 0.086125 0.04508"/>
     <parent link="base_link"/>
     <child link="wheel_left_back_link"/>
+    <axis xyz="0 0 1"/>
   </joint>
   <link name="mic_link">
     <inertial>
@@ -320,4 +325,5 @@
       <mechanicalReduction>1</mechanicalReduction>
     </actuator>
   </transmission>
+  
 </robot>

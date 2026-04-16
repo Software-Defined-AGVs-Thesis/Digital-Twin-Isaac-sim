@@ -156,7 +156,7 @@ robots_settings:
       robot_name: jetauto
       usd_path: assets/USD_Assets/robots/jetauto_flat/jetauto_flat.usd
       pose:
-        position: [5.0, 5.0, 0.5]
+        position: [5.0, 3.25, 0.5]
         orientation: [1.0, 0.0, 0.0, 0.0]
       domain_id: 0
       target_links: ["wheel_right_front_link", "wheel_left_front_link", "wheel_right_back_link", "wheel_left_back_link"]

@@ -15,4 +15,9 @@ docker run --name isaac-sim-omnilrs-container -it --gpus all -e "ACCEPT_EULA=Y" 
 -v ~/docker/isaac-sim/data:/root/.local/share/ov/data:rw \
 -v ~/docker/isaac-sim/documents:/root/Documents:rw \
 -v bash_command_history:/commandhistory \
+-e XR_RUNTIME_JSON=/openxr_host/active_runtime.json \
+-e XDG_RUNTIME_DIR=/run/user/1000 \
+-v /home/g04-f25/.config/openxr/1:/openxr_host:ro \
+-v /home/g04-f25/.steam/debian-installation:/steam:ro \
+-v /run/user/1000:/run/user/1000:rw \
 isaac-sim-omnilrs:latest

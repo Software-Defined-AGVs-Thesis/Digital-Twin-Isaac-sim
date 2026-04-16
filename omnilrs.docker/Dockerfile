@@ -87,6 +87,7 @@ RUN echo "alias teleop='ros2 run teleop_twist_keyboard teleop_twist_keyboard'" >
 # NEW: Copy TurtleBot controller script
 # =============================================================================
 COPY ./scripts/turtlebot_controller.py /opt/turtlebot/turtlebot_controller.py
+COPY ./scripts/jetauto_controller.py /opt/jetauto/jetauto_controller.py
 
 # setup entrypoint
 COPY ./entrypoint.sh /

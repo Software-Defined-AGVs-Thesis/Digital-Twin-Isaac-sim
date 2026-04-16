@@ -8,7 +8,6 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-
 def enable_ros2(simulation_app, bridge_name="foxy", **kwargs) -> None:
     """
     Enables ROS2 in the simulation.
@@ -26,5 +25,7 @@ def enable_ros2(simulation_app, bridge_name="foxy", **kwargs) -> None:
     else:
         raise ValueError("Bridge not supported, please choose between foxy and humble.")
     enable_extension("omni.kit.viewport.actions")
-
+    enable_extension("omni.kit.xr.profile.vr")
+    enable_extension("omni.kit.xr.system.steamvr")
+    enable_extension("omni.kit.xr.ui.config.metaquest")
     simulation_app.update()
