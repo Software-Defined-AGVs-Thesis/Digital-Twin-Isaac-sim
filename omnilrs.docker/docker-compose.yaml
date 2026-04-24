@@ -1,0 +1,61 @@
+services:
+  cloudxr-runtime:
+    image: ${CLOUDXR_RUNTIME_BASE_IMAGE_ARG}:${CLOUDXR_RUNTIME_VERSION_ARG}
+    network_mode: host
+    ipc: host
+    environment:
+      - ACCEPT_EULA=${ACCEPT_EULA}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - NVIDIA_REQUIRE_CUDA=cuda>=11.0
+      - CXR_BIND_ADDRESS=0.0.0.0
+      - CXR_SERVER_IP=192.168.0.134
+    # ports removed - not valid with network_mode: host
+    healthcheck:
+      test: ["CMD", "test", "-S", "/openxr/run/ipc_cloudxr"]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - openxr-volume:/openxr:rw
+    gpus: all
+
+  omnilrs:
+    image: isaac-sim-omnilrs:latest
+    container_name: isaac-sim-omnilrs-container
+    stdin_open: true
+    tty: true
+    network_mode: host
+    ipc: host
+    gpus: all
+    environment:
+      - ACCEPT_EULA=Y
+      - PRIVACY_CONSENT=Y
+      - DISPLAY=${DISPLAY}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - XR_RUNTIME_JSON=/openxr/share/openxr/1/openxr_cloudxr.json
+      - XDG_RUNTIME_DIR=/openxr/run
+    volumes:
+      - ${HOME}/.Xauthority:/root/.Xauthority
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /home/g04-f25/Desktop/OmniLRS:/workspace/omnilrs
+      - ${HOME}/docker/isaac-sim/cache/kit:/isaac-sim/kit/cache:rw
+      - ${HOME}/docker/isaac-sim/cache/ov:/root/.cache/ov:rw
+      - ${HOME}/docker/isaac-sim/cache/pip:/root/.cache/pip:rw
+      - ${HOME}/docker/isaac-sim/cache/glcache:/root/.cache/nvidia/GLCache:rw
+      - ${HOME}/docker/isaac-sim/cache/computecache:/root/.nv/ComputeCache:rw
+      - ${HOME}/docker/isaac-sim/logs:/root/.nvidia-omniverse/logs:rw
+      - ${HOME}/docker/isaac-sim/data:/root/.local/share/ov/data:rw
+      - ${HOME}/docker/isaac-sim/documents:/root/Documents:rw
+      - bash_command_history:/commandhistory
+      - openxr-volume:/openxr:rw
+    depends_on:
+      cloudxr-runtime:
+        condition: service_healthy
+
+volumes:
+  openxr-volume:
+  bash_command_history:
+  
