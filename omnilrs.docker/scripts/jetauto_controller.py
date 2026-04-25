@@ -67,6 +67,7 @@ CAMERA_NEAR     = 0.1
 CAMERA_FAR      = 100.0
 
 # Camera offset relative to screen_link (local, Isaac Y-up / sim frame)
+#Anwar change x, y, z for depth camera
 CAMERA_OFFSET_X = 0.0
 CAMERA_OFFSET_Y = -0.7
 CAMERA_OFFSET_Z = 0.4
@@ -428,6 +429,7 @@ class JetAutoController(Node):
 
             # USD cameras look down -Z by default.
             # Rotate so the camera's view axis points along sim +X (robot forward)
+            #Anwar change orientation angle
             r_op = xform.AddRotateXYZOp()
             r_op.Set(Gf.Vec3f(75.0, 0.0, 0.0))
 
