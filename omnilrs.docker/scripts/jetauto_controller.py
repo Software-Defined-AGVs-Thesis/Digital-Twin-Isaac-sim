@@ -69,8 +69,8 @@ CAMERA_FAR      = 100.0
 # Camera offset relative to screen_link (local, Isaac Y-up / sim frame)
 #Anwar change x, y, z for depth camera
 CAMERA_OFFSET_X = 0.0
-CAMERA_OFFSET_Y = -0.7
-CAMERA_OFFSET_Z = 0.4
+CAMERA_OFFSET_Y = 0.4
+CAMERA_OFFSET_Z = 0.45
 
 # Static TF offset: base_link → camera_link (ROS frame, Z-up)
 CAMERA_TF_X = 0.10
@@ -431,7 +431,11 @@ class JetAutoController(Node):
             # Rotate so the camera's view axis points along sim +X (robot forward)
             #Anwar change orientation angle
             r_op = xform.AddRotateXYZOp()
-            r_op.Set(Gf.Vec3f(75.0, 0.0, 0.0))
+            r_op.Set(Gf.Vec3f(-75.0, 0.0, 0.0)) # was 75.0, now -75.0
+
+            # ADD THIS:
+            s_op = xform.AddScaleOp()
+            s_op.Set(Gf.Vec3f(1.0, 1.0, -1.0))
 
             # Intrinsics
             cam_geom.GetFocalLengthAttr().Set(CAMERA_FOCAL_MM)
