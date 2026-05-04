@@ -3,7 +3,7 @@
 vr_container_receiver.py  —  Run INSIDE container
 ===================================================
 Receives joystick data via UDP from host and
-publishes geometry_msgs/Twist to /cmd_vel.
+publishes geometry_msgs/Twist to /vr/cmd_vel.
 
 Usage:
     source /opt/ros/humble/setup.bash
@@ -35,7 +35,7 @@ RATE_HZ     = 20
 class VRUDPReceiver(Node):
     def __init__(self):
         super().__init__('vr_udp_receiver')
-        self.pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.pub = self.create_publisher(Twist, '/vr/cmd_vel', 10)  # CHANGED: was /cmd_vel, now feeds vr_override_node instead of robot directly
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((UDP_IP, UDP_PORT))
@@ -45,7 +45,7 @@ class VRUDPReceiver(Node):
 
         self.get_logger().info("=" * 50)
         self.get_logger().info(f"Listening for joystick data on UDP port {UDP_PORT}")
-        self.get_logger().info("Publishing to /cmd_vel")
+        self.get_logger().info("Publishing to /vr/cmd_vel")  # CHANGED: log updated to match new topic
         self.get_logger().info("=" * 50)
 
     def timer_callback(self):
@@ -53,9 +53,7 @@ class VRUDPReceiver(Node):
             data_bytes, _ = self.sock.recvfrom(1024)
             data = json.loads(data_bytes.decode())
         except socket.timeout:
-            # No new data — publish zero to stop if host dies
-            self.pub.publish(Twist())
-            return
+            return  # CHANGED: removed zero Twist publish on timeout, would wrongly trigger vr_override_node
         except Exception as e:
             self.get_logger().warn(f"Bad packet: {e}")
             return
@@ -80,7 +78,7 @@ def main():
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
-        node.pub.publish(Twist())
+        node.pub.publish(Twist())  # CHANGED: publishes to /vr/cmd_vel on exit so vr_override_node timeout handles cleanup gracefully
         print("\nStopped. Robot halted.")
     finally:
         node.sock.close()

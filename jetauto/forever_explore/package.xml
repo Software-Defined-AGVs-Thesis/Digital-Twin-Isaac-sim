@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>forever_explore</name>
+  <version>0.1.0</version>
+  <description>Keeps Nav2 + explore_lite exploring forever: when the room is fully mapped, clears the global costmap and dispatches a random reachable goal so exploration never stops.</description>
+  <maintainer email="omar_anwar@aucegypt.edu">OmniLRS</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>nav2_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <!-- explore_lite / explore_lite_msgs intentionally NOT declared as deps:
+       this node degrades to random-only mode if they're missing, and we
+       don't want a build failure in explore_lite to skip forever_explore. -->
+
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

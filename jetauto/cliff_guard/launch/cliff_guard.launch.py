@@ -36,4 +36,23 @@ def generate_launch_description():
                 'manage_nav2': manage_nav2,
             }],
         ),
+         # ADDED: vr_override_node starts automatically alongside cliff_guard
+        Node(
+            package='cliff_guard',
+            executable='vr_override',
+            name='vr_override',
+            output='screen',
+            parameters=[{
+                'cmd_vel_topic': cmd_vel_topic,
+                'manage_nav2': manage_nav2,
+            }],
+        ),
+        # Handover popup — Tk dialog that pops up on cliff detection. Self-disables
+        # if $DISPLAY is unset or python3-tk is missing, so launch never breaks.
+        Node(
+            package='cliff_guard',
+            executable='handover_popup',
+            name='handover_popup',
+            output='screen',
+        ),
     ])

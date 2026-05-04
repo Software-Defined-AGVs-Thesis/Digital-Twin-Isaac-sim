@@ -1,0 +1,18 @@
+# explore_lite params tuned for OmniLRS / jetauto.
+# - robot_base_frame matches our SLAM TF tree (base_footprint).
+# - costmap_topic: /map so we drive frontier search off SLAM directly.
+# - return_to_init: false -- forever_explore takes over instead of going home.
+/**:
+  ros__parameters:
+    robot_base_frame: base_footprint
+    costmap_topic: /map
+    costmap_updates_topic: /map_updates
+    return_to_init: false
+    visualize: true
+    planner_frequency: 0.20
+    progress_timeout: 30.0
+    potential_scale: 3.0
+    orientation_scale: 0.0
+    gain_scale: 1.0
+    transform_tolerance: 0.5
+    min_frontier_size: 0.50

@@ -388,21 +388,19 @@ class JetAutoController(Node):
     # ---------------------- camera ----------------------
 
     def _create_camera_prim(self):
-        """Create a USD Camera prim directly under screen_link.
-        No manual Stage-panel action required."""
-        if self._camera_created:
-            return True
-
+        """Create (or refresh) a USD Camera prim directly under screen_link.
+        Always reapplies transform/intrinsics so source edits take effect on
+        the next controller run without needing to delete the prim first."""
         stage = omni.usd.get_context().get_stage()
         if stage is None:
             return False
 
-        # Already exists (from a previous run in this session)
+        # If the prim already exists from a previous run, fall through and
+        # re-apply the transform/intrinsics so edits to this file take effect
+        # without requiring a full sim restart.
         existing = stage.GetPrimAtPath(CAMERA_DST_PATH)
         if existing.IsValid():
-            print(f"[JetAuto] Camera prim already exists at {CAMERA_DST_PATH}")
-            self._camera_created = True
-            return True
+            print(f"[JetAuto] Camera prim already exists at {CAMERA_DST_PATH} — reapplying transform")
 
         # Parent must exist
         parent = stage.GetPrimAtPath(CAMERA_PARENT)
@@ -431,11 +429,11 @@ class JetAutoController(Node):
             # Rotate so the camera's view axis points along sim +X (robot forward)
             #Anwar change orientation angle
             r_op = xform.AddRotateXYZOp()
-            r_op.Set(Gf.Vec3f(-75.0, 0.0, 0.0)) # was 75.0, now -75.0
+            r_op.Set(Gf.Vec3f(75.0, 0.0, 180.0)) # +75 on X, +180 on Z
 
             # ADD THIS:
             s_op = xform.AddScaleOp()
-            s_op.Set(Gf.Vec3f(1.0, 1.0, -1.0))
+            s_op.Set(Gf.Vec3f(1.0, 1.0, 1.0))
 
             # Intrinsics
             cam_geom.GetFocalLengthAttr().Set(CAMERA_FOCAL_MM)

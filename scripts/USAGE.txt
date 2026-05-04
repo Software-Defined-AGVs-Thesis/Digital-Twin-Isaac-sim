@@ -1,0 +1,351 @@
+============================================================
+ OmniLRS quick-start guide
+============================================================
+
+This page covers how to run the full OmniLRS stack
+(Isaac Sim + SLAM + Nav2 + RViz + cliff detection + VR teleop +
+autonomous frontier exploration) with two commands, plus how to
+navigate the tmux dashboard once it's up.
+
+
+------------------------------------------------------------
+ ONE-TIME SETUP
+------------------------------------------------------------
+
+You only need to do this once per machine.
+
+  # 1. Install tmux on the host
+  sudo apt install -y tmux
+
+  # 2. Build the docker image (only once, or after Dockerfile changes)
+  cd ~/Desktop/OmniLRS
+  sudo ./omnilrs.docker/build_docker.sh
+
+  # 3. Pull the explore_lite submodule (one time after fresh clone)
+  cd ~/Desktop/OmniLRS
+  git submodule update --init --recursive
+
+Everything else (in-container apt installs, rosdep, colcon build
+for the ROS workspace, source patching of explore_lite for
+slam_toolbox QoS compatibility) is handled automatically by the
+launcher on the first run.
+
+
+------------------------------------------------------------
+ DAILY RUN
+------------------------------------------------------------
+
+  cd ~/Desktop/OmniLRS
+  ./scripts/start_omnilrs.sh
+
+You'll be asked once for your sudo password (hidden input).
+After that, no more prompts -- every internal sudo reuses it
+via the askpass helper. The script then auto-attaches you to
+the tmux dashboard.
+
+To detach (leaves everything running):
+  Ctrl-b d
+
+To re-attach later:
+  tmux attach -t omnilrs
+
+To start without auto-attaching:
+  NO_ATTACH=1 ./scripts/start_omnilrs.sh
+
+Stop everything:
+  ./scripts/stop_omnilrs.sh
+
+Password options
+----------------
+  ./scripts/start_omnilrs.sh
+      Interactive hidden prompt (recommended)
+
+  SUDO_PASSWORD=xxx ./scripts/start_omnilrs.sh
+      Env var (avoids shell history)
+
+  ./scripts/start_omnilrs.sh xxx
+      CLI arg (shows in `history`!)
+
+
+------------------------------------------------------------
+ WHAT THE LAUNCHER DOES
+------------------------------------------------------------
+
+start_omnilrs.sh creates a tmux session called `omnilrs` with
+eight windows. Each window runs one piece of the stack:
+
+  # 0  alvr         ALVR dashboard (host) -- connect a Quest headset
+  # 1  vr-bridge    vr_host_sender.py -- bridges SteamVR to UDP.
+                    Auto-respawns until SteamVR is reachable.
+  # 2  container    run_docker.sh -- boots the Isaac Sim container
+  # 3  isaac        Waits for the container, runs run.py
+  # 4  ros-stack    Waits for prerequisites, builds workspace if
+                    needed, then launches SLAM + Nav2 + RViz +
+                    VR receiver (staggered). Wrapped in a respawn
+                    loop -- if the container restarts, the launch
+                    is automatically re-attempted.
+  # 5  cliff-guard  Runs cliff_guard.launch.py standalone so its
+                    logs are isolated and a crash here does not
+                    kill the rest. Also wrapped in a respawn loop.
+  # 6  teleop       Interactive teleop_twist_keyboard. Switch here
+                    and use i j k l u o m , . keys to drive the
+                    robot manually (q/z to change speed).
+  # 7  explore      Autonomous exploration. Runs explore_lite
+                    (smart frontier-based exploration) plus
+                    forever_explore -- when the room is fully
+                    mapped, forever_explore clears the global
+                    costmap and dispatches a random reachable
+                    goal, so the robot keeps roaming forever.
+                    Includes a Nav2 lifecycle self-heal block:
+                    if bt_navigator is stuck unconfigured because
+                    the lifecycle_manager hit a configure timeout,
+                    this window manually transitions each Nav2
+                    node configure->activate (up to 6 attempts).
+                    Watch this window's logs for banners like
+                    "FOREVER MODE - cycle #N", "RANDOM GOAL", and
+                    "Nav2 action server registered". Also wrapped
+                    in a respawn loop.
+
+The respawn loops on windows 4/5/7 mean that if the docker
+container is restarted (manually, by Docker daemon, or by an
+OOM kill), those tmux windows do NOT close. They log
+"respawn attempt #N", wait for the new container, and re-launch
+automatically.
+
+Window 4 has the most logic. Its order is:
+
+  1. Wait for the container to exist.
+  2. Wait for the container's apt-install to finish.
+  3. (If any workspace package is missing) install python3-rosdep
+     in-container if needed, run `rosdep install` against jetauto/,
+     then `colcon build` with an LD_LIBRARY_PATH fixup so the
+     linker picks the apt libspdlog/fmt instead of the
+     incompatible ones bundled with Isaac Sim.
+  4. Heal the cliff_guard executable layout (creates symlinks
+     where ROS 2 expects them).
+  5. Wait until Isaac Sim publishes /clock (no timeout).
+  6. Launch omnilrs_stack.launch.py, which staggers
+     SLAM -> Nav2 -> RViz -> cliff_guard + VR receiver
+     at 10-second intervals.
+
+Workspace packages auto-built on first run:
+  jetauto_description, jetauto_bringup, cliff_guard,
+  explore_lite_msgs, explore_lite, forever_explore.
+
+Before tmux is even created, start_omnilrs.sh also runs an
+idempotent source patcher that injects a TRANSIENT_LOCAL QoS
+into explore_lite's costmap subscription -- without that, it
+would silently miss every /map message slam_toolbox publishes
+and block forever waiting for a costmap.
+
+A fresh first-run takes about 5 minutes (mostly the apt-install).
+Subsequent runs are much faster because most of that work is cached.
+
+
+------------------------------------------------------------
+ NAVIGATING TMUX
+------------------------------------------------------------
+
+tmux is a terminal multiplexer. It runs many shells inside one
+window so you can see all five components at once.
+
+The PREFIX is Ctrl-b. To send a tmux command, hold Ctrl and tap b,
+release both, then press the next key.
+
+  Ctrl-b 0..7    Jump to window 0 through 7
+  Ctrl-b n       Next window
+  Ctrl-b p       Previous window
+  Ctrl-b w       Pick from a list of windows
+  Ctrl-b [       Enter scroll mode (arrows / PgUp / PgDn).
+                 Press q to exit scroll mode.
+  Ctrl-b d       Detach -- leave everything running, return to
+                 your normal shell.
+  Ctrl-c         Kill the foreground process in the current
+                 window (use sparingly).
+
+Re-attach later with:
+  tmux attach -t omnilrs
+
+You can detach and re-attach as many times as you like;
+nothing stops.
+
+
+------------------------------------------------------------
+ VERIFYING THE STACK IS UP
+------------------------------------------------------------
+
+In any host terminal:
+
+  sudo docker exec -it isaac-sim-omnilrs-container bash -lc \
+    "source /opt/ros/humble/setup.bash && ros2 topic list"
+
+A healthy run shows topics like:
+  /clock
+  /cmd_vel, /cmd_vel_nav, /vr/cmd_vel
+  /scan, /map, /tf, /odom
+  /cliff_guard/depth, /cliff_guard/alert, /cliff_guard/status
+  /explore/status, /explore/frontiers
+  /navigate_to_pose/_action/feedback
+
+You should also see a Nav2 action server registered:
+
+  sudo docker exec -it isaac-sim-omnilrs-container bash -lc \
+    "source /opt/ros/humble/setup.bash && \
+     ros2 action info /navigate_to_pose -t"
+
+Look for "Action servers: 1". If it says 0, Nav2 lifecycle
+nodes are stuck -- window 7's self-heal will catch this on
+launch, but if you see it later mid-run, the recovery is to
+deactivate+activate via lifecycle_manager_navigation manually.
+
+
+------------------------------------------------------------
+ COMMON PROBLEMS
+------------------------------------------------------------
+
+vr-bridge keeps printing "attempt #N"
+  Normal until SteamVR is running and the headset is streaming.
+  The script auto-respawns vr_host_sender.py every 5s until it
+  can connect. Start SteamVR/ALVR; the next attempt will succeed.
+
+Window 4 says "still waiting for /clock..."
+  Isaac Sim hasn't started or hasn't finished loading. Switch to
+  window 3 to check. If Isaac Sim crashed, fix the cause and
+  rerun run.py in window 3 -- window 4 will detect /clock
+  automatically.
+
+Window 7 (explore) idle / no goals being sent
+  Check the log for the FOREVER MODE banner. If you only see
+  "[explore_lite] EXPLORATION_STARTED" with no progress, Nav2
+  may not be ready yet -- it waits 10s after Nav2 comes up
+  before launching. If you see "EXPLORATION_COMPLETE" but no
+  random goal follows, the /map probably has no free cells
+  yet (drive a bit with teleop to seed SLAM, then it'll catch
+  up on the next /explore/status tick).
+
+  If window 7 logs "0 action servers - running Nav2 lifecycle
+  self-heal" and never recovers after 6 attempts, Nav2's
+  lifecycle_manager has wedged. Last resort fix: manually
+  configure+activate each Nav2 node (run inside the container):
+
+    for n in controller_server smoother_server planner_server \
+             behavior_server velocity_smoother bt_navigator \
+             waypoint_follower; do
+      ros2 lifecycle set /$n configure
+      ros2 lifecycle set /$n activate
+    done
+
+A window (4/5/7) is missing from tmux after start
+  This used to happen when literal `'` chars inside the script's
+  bash -c '...' wrappers prematurely closed the outer quoting,
+  killing the inner bash before it could log anything. All
+  known instances are fixed in the current script. If a window
+  goes missing again, check the syntax of any recent edit by
+  running: bash -n scripts/start_omnilrs.sh
+
+Cliff detected but the robot keeps moving
+  This was a real bug: cliff_guard tried to "pause" Nav2 by
+  lifecycle-deactivating each node, but bt_navigator and
+  behavior_server typically REJECT a deactivate while a
+  NavigateToPose goal is in flight. The result was a half-
+  paused Nav2: controller dead, but BT still ticking and
+  recoveries (spin/back-up) writing to /cmd_vel_nav, which
+  velocity_smoother forwarded to /cmd_vel.
+
+  The current cliff_guard does THREE things on detection:
+    1. Spam zero Twist on BOTH /cmd_vel AND /cmd_vel_nav at 20Hz
+       (so velocity_smoother has nothing to forward).
+    2. Cancel ALL active goals on /navigate_to_pose via the
+       cancel_goal action service.
+    3. Best-effort lifecycle deactivate (some may still fail,
+       but steps 1+2 already stopped the wheels).
+
+  If you still see motion after a CLIFF DETECTED log line,
+  check whether vr_override_active is True -- when human is
+  in VR control, cliff_guard intentionally does NOT zero
+  /cmd_vel (you keep authority). Otherwise, look for the
+  "Cancel-all dispatched" log line; if it's missing, the
+  /navigate_to_pose action server isn't registered (see the
+  Nav2 lifecycle issue above).
+
+ros-stack window died after a container restart
+  start_omnilrs.sh wraps windows 4/5/7 in a respawn loop, so
+  this should NOT happen anymore. If it does (you see only 7
+  tmux windows instead of 8), the bash inside the window
+  exited with an error before the loop could iterate. Inspect
+  the start script syntax and the last lines of the dead
+  window's pane (use Ctrl-b w to pick a window).
+
+"package 'X' not found" on launch
+  A workspace package wasn't built. The next start_omnilrs.sh
+  should auto-build it; if not, build manually:
+
+    sudo docker exec -it isaac-sim-omnilrs-container bash -lc \
+      "source /opt/ros/humble/setup.bash && \
+       cd /workspace/omnilrs && colcon build"
+
+"the input device is not a TTY"
+  Old version of the script. Update -- current version uses a
+  SUDO_ASKPASS helper that doesn't touch stdin.
+
+Container won't stop
+  sudo docker rm -f isaac-sim-omnilrs-container
+  tmux kill-server
+
+
+------------------------------------------------------------
+ MANUAL LAUNCHES (NO TMUX)
+------------------------------------------------------------
+
+If you ever want to run pieces by hand:
+
+  # Container
+  sudo ./omnilrs.docker/run_docker.sh
+
+  # Isaac Sim (in another terminal)
+  sudo docker exec -it -w /workspace/omnilrs \
+    isaac-sim-omnilrs-container \
+    /isaac-sim/python.sh run.py
+
+  # ROS stack (in another terminal, after Isaac Sim is up)
+  sudo docker exec -it isaac-sim-omnilrs-container bash -lc \
+    "export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:\$LD_LIBRARY_PATH && \
+     source /opt/ros/humble/setup.bash && \
+     export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:\$LD_LIBRARY_PATH && \
+     source /workspace/omnilrs/install/local_setup.bash && \
+     ros2 launch jetauto_bringup omnilrs_stack.launch.py"
+
+
+------------------------------------------------------------
+ TUNABLE ENV VARS
+------------------------------------------------------------
+
+Pass these in front of ./scripts/start_omnilrs.sh to override
+defaults:
+
+  SUDO_PASSWORD            (prompt)
+      Skip the password prompt
+
+  ALVR_DIR                 $HOME/alvr_streamer_linux
+      ALVR install location
+
+  UDP_BRIDGE_DIR           $HOME/UDP_Bridge
+      Where vr_host_sender.py lives
+
+  CONTAINER                isaac-sim-omnilrs-container
+      Docker container name
+
+  CLOCK_WAIT_SECS          15
+      Settle delay before first /clock poll
+
+  CLOCK_POLL_INTERVAL      5
+      Seconds between /clock polls
+
+  CLOCK_HEARTBEAT_EVERY    12
+
+
+  
+      Heartbeat message every N polls
+
+Example:
+  ALVR_DIR=/opt/alvr ./scripts/start_omnilrs.sh

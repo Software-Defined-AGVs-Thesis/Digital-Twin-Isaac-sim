@@ -22,4 +22,4 @@ docker run --name isaac-sim-omnilrs-container -it --gpus all -e "ACCEPT_EULA=Y" 
 -v /run/user/1000:/run/user/1000:rw \
 -v /home/g04-f25/.steam:/home/g04-f25/.steam \
 isaac-sim-omnilrs:latest \
-bash -c "apt-get update && apt-get install -y ros-humble-slam-toolbox ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-rviz2 ros-humble-tf2-tools --no-install-recommends && rm -rf /var/lib/apt/lists/* && bash"
+bash -c "apt-get update && apt-get install -y ros-humble-slam-toolbox ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-rviz2 ros-humble-tf2-tools python3-colcon-common-extensions python3-tk --no-install-recommends && rm -rf /var/lib/apt/lists/* && bash"
