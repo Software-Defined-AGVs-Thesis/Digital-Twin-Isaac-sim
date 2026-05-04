@@ -16,9 +16,6 @@ from nav2_msgs.srv import ManageLifecycleNodes
 
 from cv_bridge import CvBridge
 import numpy as np
-import os
-import signal
-import subprocess
 
 NAV2_LIFECYCLE_NODES = [
     'controller_server',
@@ -297,76 +294,18 @@ class CliffGuard(Node):
         return True, 'Nav2 resumed.'
 
     def _pause_nav2(self):
-        # NUCLEAR: SIGSTOP the Nav2 processes. Lifecycle pause + cancel-goal
-        # both proved unreliable (lifecycle_manager bonds reject deactivation,
-        # recoveries fire from BT, etc.) — robot kept moving after cliff
-        # detection. Sending SIGSTOP freezes the processes at the kernel
-        # level: they cannot publish, cannot tick the BT, cannot do anything.
-        # SIGCONT in _resume_nav2 brings them back exactly where they left.
-        self._stop_nav2_processes()
-        # Belt-and-suspenders: also ask lifecycle_manager to PAUSE in case
-        # processes get SIGCONT'd later by something else (or in case the
-        # SIGSTOP didn't catch every PID).
+        # Use lifecycle_manager_navigation's manage_nodes service. This is
+        # the only path that doesn't break Nav2's bond protocol — SIGSTOP
+        # was tried and breaks it (action server never re-registers after
+        # SIGCONT because bonds expire during the freeze). Per-node
+        # deactivate is also rejected because the manager owns the nodes.
         self._call_lifecycle_manager(ManageLifecycleNodes.Request.PAUSE,
                                      fallback_transition=Transition.TRANSITION_DEACTIVATE)
 
     def _resume_nav2(self):
-        # SIGCONT first so processes can respond to the lifecycle RESUME
-        # request below.
-        self._cont_nav2_processes()
         self._call_lifecycle_manager(ManageLifecycleNodes.Request.RESUME,
                                      fallback_transition=Transition.TRANSITION_ACTIVATE)
 
-    # Process-name patterns whose PIDs we freeze on cliff. ROS 2 launches
-    # nodes with their executable name as argv[0], so pgrep -f matches them
-    # reliably. Order matters only for logging.
-    NAV2_PROCESS_NAMES = (
-        'velocity_smoother',  # last-mile cmd_vel forwarder — kill first
-        'controller_server',
-        'bt_navigator',
-        'behavior_server',
-        'planner_server',
-        'smoother_server',
-        'waypoint_follower',
-    )
-
-    def _signal_nav2_processes(self, sig, label):
-        my_pid = os.getpid()
-        for name in self.NAV2_PROCESS_NAMES:
-            try:
-                out = subprocess.check_output(
-                    ['pgrep', '-f', name], text=True, timeout=1.0).strip()
-            except subprocess.CalledProcessError:
-                continue  # no match
-            except Exception as e:
-                self.get_logger().warn(f'pgrep {name} failed: {e}')
-                continue
-            for pid_str in out.split('\n'):
-                if not pid_str:
-                    continue
-                try:
-                    pid = int(pid_str)
-                except ValueError:
-                    continue
-                if pid == my_pid:
-                    continue  # never signal ourselves
-                try:
-                    os.kill(pid, sig)
-                    self.get_logger().info(f'{label} -> {name} (pid {pid})')
-                except ProcessLookupError:
-                    pass
-                except PermissionError as e:
-                    self.get_logger().warn(
-                        f'{label} -> {name} (pid {pid}) denied: {e} '
-                        f'(cliff_guard must run as same uid as Nav2)')
-                except Exception as e:
-                    self.get_logger().warn(f'{label} -> {name} (pid {pid}) errored: {e}')
-
-    def _stop_nav2_processes(self):
-        self._signal_nav2_processes(signal.SIGSTOP, 'SIGSTOP')
-
-    def _cont_nav2_processes(self):
-        self._signal_nav2_processes(signal.SIGCONT, 'SIGCONT')
 
     def _call_lifecycle_manager(self, command, fallback_transition):
         """Atomic Nav2 PAUSE/RESUME via lifecycle_manager_navigation.
@@ -464,13 +403,6 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        # CRITICAL: never leave Nav2 frozen if cliff_guard dies. SIGCONT all
-        # candidate processes unconditionally — harmless if they were already
-        # running, life-saving if they were SIGSTOP'd by an emergency stop.
-        try:
-            node._cont_nav2_processes()
-        except Exception:
-            pass
         node.destroy_node()
         rclpy.shutdown()
 

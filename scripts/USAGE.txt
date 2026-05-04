@@ -344,7 +344,7 @@ defaults:
   CLOCK_HEARTBEAT_EVERY    12
 
 
-  
+
       Heartbeat message every N polls
 
 Example:
