@@ -21,8 +21,9 @@
 #   [1] isaac       - waits for container, runs run.py (Isaac Sim)
 #   [2] ros-stack   - waits for prerequisites, launches SLAM + Nav2 + RViz + VR receiver
 #   [3] cliff-guard - cliff_guard launch on its own (isolated logs, isolated failures)
-#   [4] teleop      - interactive teleop_twist_keyboard for manual control
-#   [5] explore     - explore_lite frontier exploration + forever_explore wrapper
+#   [4] stuck-guard - stuck_guard launch on its own (wheels-spinning-but-pose-static detector)
+#   [5] teleop      - interactive teleop_twist_keyboard for manual control
+#   [6] explore     - explore_lite frontier exploration + forever_explore wrapper
 #
 # Attach:  tmux attach -t omnilrs
 # Kill:    tmux kill-session -t omnilrs
@@ -198,7 +199,7 @@ tmux new-window -t "$SESSION" -n ros-stack -c "$REPO_DIR" "bash -c '
 
   echo \"[ROS-STACK] checking workspace build state...\"
   MISSING=\"\"
-  for pkg in jetauto_description jetauto_bringup cliff_guard explore_lite_msgs explore_lite forever_explore; do
+  for pkg in jetauto_description jetauto_bringup cliff_guard stuck_guard explore_lite_msgs explore_lite forever_explore; do
     if ! sudox docker exec ${CONTAINER} test -d /workspace/omnilrs/install/\$pkg; then
       MISSING=\"\$MISSING \$pkg\"
     fi
@@ -240,6 +241,22 @@ tmux new-window -t "$SESSION" -n ros-stack -c "$REPO_DIR" "bash -c '
     if [ -d \"\$BIN\" ]; then
       mkdir -p \"\$LIB\"
       for exe in cliff_guard vr_override handover_popup; do
+        if [ -f \"\$BIN/\$exe\" ] && [ ! -e \"\$LIB/\$exe\" ]; then
+          ln -sf \"\$BIN/\$exe\" \"\$LIB/\$exe\"
+          echo \"[ROS-STACK]   linked \$LIB/\$exe\"
+        fi
+      done
+    fi
+  '\''
+
+  # stuck_guard ships a setup.cfg so console_scripts go to lib/, but heal anyway.
+  echo \"[ROS-STACK] verifying stuck_guard executable layout...\"
+  sudox docker exec ${CONTAINER} bash -lc '\''
+    BIN=/workspace/omnilrs/install/stuck_guard/bin
+    LIB=/workspace/omnilrs/install/stuck_guard/lib/stuck_guard
+    if [ -d \"\$BIN\" ]; then
+      mkdir -p \"\$LIB\"
+      for exe in stuck_guard; do
         if [ -f \"\$BIN/\$exe\" ] && [ ! -e \"\$LIB/\$exe\" ]; then
           ln -sf \"\$BIN/\$exe\" \"\$LIB/\$exe\"
           echo \"[ROS-STACK]   linked \$LIB/\$exe\"
@@ -312,7 +329,43 @@ tmux new-window -t "$SESSION" -n cliff-guard -c "$REPO_DIR" "bash -c '
   done
 '"
 
-# ---- Window 4: teleop ---------------------------------------------------------
+# ---- Window 4: stuck_guard ----------------------------------------------------
+tmux new-window -t "$SESSION" -n stuck-guard -c "$REPO_DIR" "bash -c '
+  ${SUDO_HELPER}
+  ROS_PRELUDE=\"export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:\\\$LD_LIBRARY_PATH && source /opt/ros/humble/setup.bash && export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:\\\$LD_LIBRARY_PATH\"
+
+  ATTEMPT=0
+  while true; do
+  ATTEMPT=\$((ATTEMPT + 1))
+  if [ \$ATTEMPT -gt 1 ]; then
+    echo \"[STUCK-GUARD] >>> respawn attempt #\$ATTEMPT <<<\"
+  fi
+
+  echo \"[STUCK-GUARD] waiting for /clock ...\"
+  while ! sudox docker exec ${CONTAINER} bash -lc \"\$ROS_PRELUDE && ros2 topic list 2>/dev/null | grep -q ^/clock\$\" 2>/dev/null; do
+    sleep 5
+  done
+
+  echo \"[STUCK-GUARD] waiting for stuck_guard executable...\"
+  while ! sudox docker exec ${CONTAINER} test -e /workspace/omnilrs/install/stuck_guard/lib/stuck_guard/stuck_guard 2>/dev/null; do
+    sleep 5
+  done
+
+  echo \"[STUCK-GUARD] sleeping 30s so SLAM/Nav2/RViz start first...\"
+  sleep 30
+
+  echo \"[STUCK-GUARD] launching stuck_guard.launch.py ...\"
+  sudox docker exec -it ${CONTAINER} bash -lc \"
+    \$ROS_PRELUDE &&
+    source /workspace/omnilrs/install/local_setup.bash &&
+    ros2 launch stuck_guard stuck_guard.launch.py
+  \" || true
+  echo \"[STUCK-GUARD] launch exited. Respawning in 5s — Ctrl-C to stop.\"
+  sleep 5
+  done
+'"
+
+# ---- Window 5: teleop ---------------------------------------------------------
 tmux new-window -t "$SESSION" -n teleop -c "$REPO_DIR" "bash -c '
   ${SUDO_HELPER}
   ROS_PRELUDE=\"export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:\\\$LD_LIBRARY_PATH && source /opt/ros/humble/setup.bash && export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:\\\$LD_LIBRARY_PATH\"
