@@ -102,9 +102,24 @@ echo "[start_omnilrs_cloud] askpass helper at $ASKPASS_SCRIPT"
 
 SUDO_HELPER="export SUDO_ASKPASS=${ASKPASS_SCRIPT}; sudox() { sudo -A \"\$@\"; }"
 
+# ---- Virtual display setup (Xvfb) --------------------------------------------
+# EC2 has no monitor. We create a virtual display so Isaac Sim can render.
+# If Xvfb is not installed: sudo apt-get install -y xvfb
+echo "[start_omnilrs_cloud] setting up virtual display..."
+if ! command -v Xvfb >/dev/null 2>&1; then
+  echo "[start_omnilrs_cloud] installing Xvfb..."
+  sudo apt-get install -y xvfb x11-utils >/dev/null
+fi
+# Kill any existing Xvfb on :1
+pkill -f "Xvfb :1" 2>/dev/null || true
+sleep 1
+Xvfb :1 -screen 0 1920x1080x24 &
+export DISPLAY=:1
+sleep 2
+echo "[start_omnilrs_cloud] virtual display started on :1"
+
 # ---- Window 0: Container (EC2 version — no X11 host paths, no Steam, no OpenXR) ----
-# X11 forwarding comes from ssh -X, so we pass $DISPLAY and mount /tmp/.X11-unix.
-# Steam/OpenXR mounts are removed — they don't exist on EC2.
+# Uses Xvfb virtual display :1 started above.
 tmux new-session -d -s "$SESSION" -n container -c "$REPO_DIR" "bash -c '
   ${SUDO_HELPER}
   echo \"[CONTAINER] launching docker (EC2 cloud mode)...\"
@@ -117,7 +132,7 @@ tmux new-session -d -s "$SESSION" -n container -c "$REPO_DIR" "bash -c '
     --ipc=host \
     -e ACCEPT_EULA=Y \
     -e PRIVACY_CONSENT=Y \
-    -e DISPLAY=\$DISPLAY \
+    -e DISPLAY=:1 \
     -e ROS_DOMAIN_ID=0 \
     -e RMW_IMPLEMENTATION=rmw_fastrtps_cpp \
     -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
