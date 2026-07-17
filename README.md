@@ -371,3 +371,4 @@ tmux kill-server
 - **Sim → real digital twin mapping** does not fully work — the real
   robot runs Nav2 + SASL independently, not mirrored from the sim (§7).
 - **Cloud/VPC variant** is experimental (§9).
+- **Integration with InnexisVSI** a Siemens EDA tool requirement for the project. 
