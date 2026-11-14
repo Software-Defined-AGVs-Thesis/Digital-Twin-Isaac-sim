@@ -1,7 +1,4 @@
-"""
-Run OmniLRS with WebRTC streaming enabled.
-This is a wrapper - no edits to original files needed.
-"""
+
 
 import sys
 import os
