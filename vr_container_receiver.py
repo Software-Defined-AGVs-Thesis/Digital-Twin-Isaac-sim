@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""
-vr_container_receiver.py  —  Run INSIDE container
-===================================================
-Receives joystick data via UDP from host and
-publishes geometry_msgs/Twist to /vr/cmd_vel.
-
-Usage:
-    source /opt/ros/humble/setup.bash
-    python3 vr_container_receiver.py
-"""
 
 import socket
 import json
